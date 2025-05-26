@@ -34,7 +34,9 @@ export async function execute(interaction: CommandInteraction) {
             .setFooter({ text: 'Étape 1: Sélection du campus' });
 
         // Récupération des campus depuis l'API
-        const response = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/campuses`);
+        const url = `${process.env.API_URL || 'http://localhost:3000/api'}/campuses`;
+        console.log('URL utilisée pour récupérer les campus:', url);
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error('Impossible de récupérer la liste des campus');
         }
@@ -42,33 +44,36 @@ export async function execute(interaction: CommandInteraction) {
         const responseData = await response.json();
         logger.debug({ responseData }, 'Données reçues de l\'API');
 
-        // Vérification de la structure des données
-        if (!responseData || !Array.isArray(responseData.data)) {
-            throw new Error('Format de données invalide reçu de l\'API');
+        // Correction : gestion du double data
+        let campuses: Campus[] = [];
+        if (responseData && Array.isArray(responseData.data)) {
+          campuses = responseData.data;
+        } else if (responseData && responseData.data && Array.isArray(responseData.data.data)) {
+          campuses = responseData.data.data;
+        } else {
+          throw new Error('Format de données invalide reçu de l\'API');
         }
 
-        const campuses = responseData.data;
-        
         if (campuses.length === 0) {
-            await interaction.reply({
-                content: '❌ Aucun campus n\'est disponible. Veuillez d\'abord créer un campus.',
-                ephemeral: true
-            });
-            return;
+          await interaction.reply({
+            content: '❌ Aucun campus n\'est disponible. Veuillez d\'abord créer un campus.',
+            ephemeral: true
+          });
+          return;
         }
 
         // Validation et transformation des données
         const validCampuses = campuses.filter((campus: any): campus is Campus => 
-            campus && 
-            typeof campus === 'object' && 
-            'uuidCampus' in campus &&
-            'name' in campus && 
-            typeof campus.name === 'string' &&
-            typeof campus.uuidCampus === 'string'
+          campus && 
+          typeof campus === 'object' && 
+          'uuidCampus' in campus &&
+          'name' in campus && 
+          typeof campus.name === 'string' &&
+          typeof campus.uuidCampus === 'string'
         );
 
         if (validCampuses.length === 0) {
-            throw new Error('Aucun campus valide trouvé dans les données');
+          throw new Error('Aucun campus valide trouvé dans les données');
         }
 
         logger.debug({ validCampuses }, 'Campus valides trouvés');

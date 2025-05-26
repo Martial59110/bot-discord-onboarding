@@ -26,14 +26,17 @@ const requiredRoles = [
     }
 ];
 
-async function setupRoles() {
+async function setupRoles(guildId?: string) {
     try {
-        const guild = client.guilds.cache.get(process.env.GUILD_ID!);
+        const guild = guildId 
+            ? client.guilds.cache.get(guildId)
+            : client.guilds.cache.get(process.env.GUILD_ID!);
+
         if (!guild) {
             throw new Error('Guild not found');
         }
 
-        logger.info('Début de la configuration des rôles...');
+        logger.info(`Début de la configuration des rôles pour ${guild.name}...`);
 
         for (const roleData of requiredRoles) {
             const existingRole = guild.roles.cache.find(role => role.name === roleData.name);
@@ -59,7 +62,8 @@ async function setupRoles() {
 }
 
 client.once('ready', () => {
-    setupRoles();
+    const guildId = process.argv[2]; // Récupérer l'ID de la guilde depuis les arguments
+    setupRoles(guildId);
 });
 
 client.login(process.env.BOT_TOKEN); 

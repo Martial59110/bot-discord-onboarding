@@ -19,9 +19,9 @@ import { data as createPromoCommand } from '../promotions/commands/create-promo.
 dotenv.config();
 
 // Vérification des variables d'environnement requises
-const { BOT_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
+const { BOT_TOKEN, CLIENT_ID } = process.env;
 
-if (!BOT_TOKEN || !CLIENT_ID || !GUILD_ID) {
+if (!BOT_TOKEN || !CLIENT_ID) {
     logger.fatal("❌ Variables d'environnement manquantes ! Vérifiez votre fichier .env");
     process.exit(1);
 }
@@ -44,21 +44,33 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
 
-async function deployCommands() {
+async function deployCommands(guildId?: string) {
     try {
         logger.info('🚀 Début du déploiement des commandes slash...');
 
-        await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID!, GUILD_ID!),
-            { body: commands }
-        );
-
-        logger.info('✅ Commandes slash déployées avec succès !');
+        if (!guildId) {
+            // Déploiement global
+            await rest.put(
+                Routes.applicationCommands(CLIENT_ID!),
+                { body: commands }
+            );
+            logger.info('✅ Commandes slash déployées globalement avec succès !');
+        } else {
+            // Déploiement pour une guilde spécifique
+            await rest.put(
+                Routes.applicationGuildCommands(CLIENT_ID!, guildId),
+                { body: commands }
+            );
+            logger.info(`✅ Commandes slash déployées avec succès pour la guilde ${guildId} !`);
+        }
     } catch (error) {
         logger.error("❌ Erreur lors du déploiement des commandes slash :", error);
+        process.exit(1);
     }
 }
 
-deployCommands();
+// Récupérer l'ID de la guilde depuis les arguments de la ligne de commande
+const guildId = process.argv[2];
+deployCommands(guildId);
 
 
